@@ -1,0 +1,5 @@
+IBM Plex Sans KR (plexkr-Regular.woff2, plexkr-SemiBold.woff2, plexkr-Bold.woff2)
+- 저작권: Copyright (c) 2018 IBM Corp.
+- 라이선스: SIL Open Font License 1.1 (https://scripts.sil.org/OFL)
+- 원본: https://github.com/IBM/plex
+- 이 앱은 위 파일을 로컬로만 불러옵니다(외부 요청 0건). 하위 라이선스 전문은 위 주소에서 확인할 수 있습니다.
