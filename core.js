@@ -82,7 +82,37 @@
    * @param {string} cat 카테고리 id 또는 'all'
    * @returns {Array} 점수순 결과
    */
+  /** 오픈소스 검색 엔진(engines/search-engine.js — Fuse.js). 없으면 내장 검색만 쓴다. */
+  var SEARCH = null;
+  function useSearch(engine) {
+    SEARCH = engine && typeof engine.search === 'function' ? engine : null;
+    return !!SEARCH;
+  }
+  function searchEngine() { return SEARCH; }
+
+  /**
+   * 초성·오타 허용 보조 검색. 기존 정확 검색이 0건일 때만 호출된다.
+   * @returns {{items: Array, fuzzy: boolean, query: string}}
+   */
+  function fuzzyItems(items, query, cat) {
+    var pool = (items || []).filter(function (it) {
+      return !cat || cat === 'all' || it.cat === cat;
+    });
+    var q = String(query === null || query === undefined ? '' : query).trim();
+    if (!SEARCH || !q) return { items: [], fuzzy: false, query: q };
+    var hits;
+    try { hits = SEARCH.search(pool, q); } catch (e) { hits = []; }
+    return { items: hits.map(function (h) { return h.item; }), fuzzy: hits.length > 0, query: q };
+  }
+
   function searchItems(items, query, cat) {
+    var exact = searchExact(items, query, cat);
+    if (exact.length) return exact;
+    var fuzzy = fuzzyItems(items, query, cat);
+    return fuzzy.fuzzy ? fuzzy.items : exact;
+  }
+
+  function searchExact(items, query, cat) {
     var q = normalize(query);
     var pool = (items || []).filter(function (it) {
       return !cat || cat === 'all' || it.cat === cat;
@@ -373,6 +403,10 @@
     pct: pct,
     roundMoney: roundMoney,
     searchItems: searchItems,
+    searchExact: searchExact,
+    fuzzyItems: fuzzyItems,
+    useSearch: useSearch,
+    searchEngine: searchEngine,
     calcBand: calcBand,
     defaultSelection: defaultSelection,
     judgeQuote: judgeQuote,

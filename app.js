@@ -8,6 +8,10 @@
   var C = window.PriceCore;
   var CATS = window.PriceData.CATEGORIES;
   var ITEMS = window.PriceData.ITEMS;
+  var PS = window.PriceSearch || null;   // engines/search-engine.js (Fuse.js·Chart.js)
+  var Pro = window.ProConnector || null; // engines/pro-api-connector.js (무료 AI 맛보기)
+  if (PS && C.useSearch) C.useSearch(PS);
+  var FREE_APP = 'price-radar-kr';
 
   var $ = function (sel, root) { return (root || document).querySelector(sel); };
   var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
@@ -227,20 +231,111 @@
   function renderCards() {
     var list = C.searchItems(ITEMS, state.q, state.cat);
     var q = state.q.trim();
+    var exactCount = q ? C.searchExact(ITEMS, q, state.cat).length : list.length;
+    var fuzzy = !!(q && exactCount === 0 && list.length > 0);
     $('#cards').innerHTML = list.map(cardHtml).join('');
     $('#resultCount').innerHTML = q
-      ? '“' + esc(q) + '” 검색 결과 <em>' + list.length + '</em>건'
+      ? (fuzzy
+        ? '“' + esc(q) + '”와 비슷한 품목 <em>' + list.length + '</em>건'
+        : '“' + esc(q) + '” 검색 결과 <em>' + list.length + '</em>건')
       : '전체 <em>' + list.length + '</em>개 품목';
+    var hintEl = $('#resultHint');
+    if (hintEl) {
+      hintEl.textContent = fuzzy
+        ? '정확히 같은 이름은 없지만 초성·오타를 보고 가까운 품목을 찾았습니다. 다르면 아래 브리지에서 직접 조사하세요.'
+        : '카드를 누르면 조건별 계산·함정 포인트·질문 3문장이 열립니다.';
+    }
     $('#emptyState').hidden = !(q && list.length === 0);
     $('#cards').hidden = !!(q && list.length === 0);
     $('#resultHint').hidden = !!(q && list.length === 0);
     $('#clearQ').hidden = !q;
+    renderPriceChart(list);
     var nf = $('#notFound');
     if (nf) {
       nf.hidden = !q;
       var nfq = $('#notFoundQ');
       if (nfq) nfq.textContent = '“' + q + '”';
     }
+  }
+
+  /* ---------- 가격 범위 차트 (Chart.js) ---------- */
+
+  function bandFor(it) {
+    var sel = C.defaultSelection(it, it.globals || []);
+    (it.globals || []).forEach(function (k) { if (state.globals[k] !== undefined) sel[k] = state.globals[k]; });
+    return C.calcBand(it, sel);
+  }
+
+  function renderPriceChart(list) {
+    var panel = $('#rangePanel');
+    var canvas = $('#priceChart');
+    if (!panel) return;
+    if (!PS || !PS.drawPriceChart || !list || !list.length) {
+      panel.hidden = true;
+      if (PS && PS.destroy) PS.destroy('priceChart');
+      return;
+    }
+    panel.hidden = false;
+    var rows = list.slice().sort(function (a, b) { return bandFor(a).low - bandFor(b).low; }).slice(0, 12).map(function (it) {
+      var b = bandFor(it);
+      return { label: it.name.length > 24 ? it.name.slice(0, 23) + '…' : it.name, low: b.low, avg: b.avg, high: b.high };
+    });
+    var meta = $('#rangeMeta');
+    if (meta) meta.textContent = rows.length + '개 품목 · ' + (state.q ? '검색 결과' : '전체') + ' · 조건 반영';
+    try {
+      PS.drawPriceChart(canvas, rows);
+    } catch (e) {
+      panel.hidden = true;
+    }
+  }
+
+  /* ---------- 무료 AI 맛보기 (키 없이) ---------- */
+
+  function freeStatus(text, kind) {
+    var el = $('#freeStatus');
+    if (!el) return;
+    el.className = 'micro' + (kind ? ' free-' + kind : '');
+    el.textContent = text;
+  }
+
+  function freeAsk() {
+    if (!Pro) { freeStatus('무료 AI 엔진을 불러오지 못했습니다. engines/pro-api-connector.js 를 확인하세요.', 'error'); return; }
+    var name = $('#bridgeName') ? $('#bridgeName').value.trim() : '';
+    if (!name) { toast('품목·증상을 먼저 적어 주세요'); freeStatus('품목·증상을 먼저 적어 주세요.', 'error'); return; }
+    var btn = $('[data-action="free-ask"]');
+    if (btn) btn.disabled = true;
+    freeStatus('무료 체험으로 조사 중… (10~30초)', '');
+    var out = $('#freeOut');
+    if (out) out.hidden = true;
+    var card = $('#freeCard');
+    if (card) card.innerHTML = '';
+    Pro.generateFree({
+      task: 'text',
+      prompt: bridgePrompt(),
+      system: '너는 한국 소비자 가격 조사원이다. 확인된 자료만 쓰고, 확인되지 않은 숫자는 [확인 필요]로 남긴다. 표와 출처 링크·날짜를 함께 적는다.'
+    }, { app: FREE_APP, truncate: true, timeoutMs: 45000 }).then(function (res) {
+      if (btn) btn.disabled = false;
+      if (res.ok) {
+        if (out) {
+          out.hidden = false;
+          out.textContent = res.text + '\n\n— 무료 체험 AI 초안입니다. 금액과 출처는 꼭 원문에서 확인하세요.';
+        }
+        var left = res.quota ? ' · 남은 ' + res.quota.remaining + '/' + res.quota.limit + '회' : '';
+        freeStatus('무료 체험으로 받았습니다' + left + (res.truncated ? ' · 2,000자 제한으로 프롬프트를 줄였습니다' : '') + '.', 'ok');
+      } else if (res.upgrade) {
+        freeStatus(res.message, 'error');
+        if (card && Pro.freeLimitCard) {
+          var c = Pro.freeLimitCard(res);
+          card.innerHTML = '<div class="free-card"><b>' + esc(c.title) + '</b><p>' + esc(c.body) + '</p>' +
+            '<a href="' + esc(c.primary.href) + '" target="_blank" rel="noopener noreferrer">' + esc(c.primary.label) + ' ↗</a></div>';
+        }
+      } else {
+        freeStatus(res.message || '무료 체험에 실패했습니다.', 'error');
+      }
+    }, function () {
+      if (btn) btn.disabled = false;
+      freeStatus('무료 체험에 연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요.', 'error');
+    });
   }
 
   /* ---------- 모달 ---------- */
@@ -674,6 +769,7 @@
       saveMemo();
       return;
     }
+    if (name === 'free-ask') { freeAsk(); return; }
     if (name === 'copy-prompt') { copyText(bridgePrompt(), 'AI 조사 프롬프트를 복사했습니다'); return; }
     if (name === 'open-chatgpt' || name === 'open-claude' || name === 'open-gemini') {
       var prompt = bridgePrompt();

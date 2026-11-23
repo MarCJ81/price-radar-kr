@@ -841,3 +841,36 @@ img, svg { display: block; max-width: 100%; }
 }
 
 body.modal-open { overflow: hidden; }
+
+/* ── 가격 범위 지도 (Chart.js) ───────────────────── */
+.range-panel { margin: 6px 0 18px; padding: 16px 18px; }
+.range-panel > summary { list-style: none; cursor: pointer; margin-bottom: 10px; }
+.range-panel > summary::-webkit-details-marker { display: none; }
+.range-panel > summary::after { content: '접기'; font-size: 10.5px; font-weight: 700; color: var(--sub); flex: none; }
+.range-panel:not([open]) > summary { margin-bottom: 0; }
+.range-panel:not([open]) > summary::after { content: '펼치기'; }
+.range-chart { position: relative; height: 240px; }
+.range-panel .micro { margin-top: 8px; }
+
+/* ── 무료 AI 맛보기 ─────────────────────────────── */
+.free-block {
+  margin: 12px 0 4px; padding: 12px 13px; border: 1px dashed var(--accent-line);
+  border-radius: 12px; background: var(--accent-soft);
+}
+.free-block .btn { width: 100%; }
+.free-block .micro { color: var(--ink-2); margin-top: 8px; }
+.free-error { color: var(--danger) !important; }
+.free-ok { color: var(--ok-ink) !important; }
+.free-out {
+  margin-top: 10px; padding: 11px 12px; max-height: 320px; overflow: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  font-size: 12px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; color: var(--ink-2);
+}
+.free-card {
+  margin-top: 8px; padding: 10px 12px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 10px;
+}
+.free-card b { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+.free-card p { font-size: 11.5px; color: var(--ink-2); line-height: 1.6; margin: 0; }
+.free-card a { display: inline-block; margin-top: 6px; font-size: 11.5px; font-weight: 700; color: var(--accent); text-decoration: none; }
+.free-card a:hover { text-decoration: underline; }

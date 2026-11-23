@@ -90,6 +90,15 @@
       </div>
     </div>
 
+    <details class="panel range-panel" id="rangePanel" open>
+      <summary class="panel-head">
+        <h2>가격 범위 지도</h2>
+        <span class="muted" id="rangeMeta"></span>
+      </summary>
+      <div class="range-chart"><canvas id="priceChart" height="228" role="img" aria-label="품목별 최저·평균·최고 가격 범위 막대그래프"></canvas></div>
+      <p class="micro" id="rangeNote">막대는 최저~최고, 가운데 점은 평균입니다. 왼쪽이 쌀수록 긴 막대는 선택지가 넓다는 뜻입니다.</p>
+    </details>
+
     <div class="grid" id="cards"></div>
 
     <div class="notfound" id="notFound" hidden>
@@ -204,6 +213,13 @@
           <button class="btn" type="button" data-action="open-claude">Claude 열기</button>
           <button class="btn" type="button" data-action="open-gemini">Gemini 열기</button>
         </div>
+        <div class="free-block">
+          <button class="btn btn-primary" type="button" data-action="free-ask">키 없이 무료로 조사받기</button>
+          <p class="micro" id="freeStatus">키를 넣지 않아도 하루 몇 회(기기 기준) 바로 답을 받아 볼 수 있습니다. 다 쓰면 내 무료 Gemini 키로 이어집니다.</p>
+          <div id="freeCard"></div>
+          <pre class="free-out" id="freeOut" hidden></pre>
+        </div>
+        <p class="micro">무료 체험은 외부 AI 제공자로 전송됩니다. 집 주소·연락처 같은 민감한 내용은 넣지 마세요.</p>
         <p class="group-label">네이버 실제 후기</p>
         <div class="bridge-actions">
           <button class="btn btn-ghost" type="button" data-action="open-naver-blog">블로그 후기</button>
@@ -256,6 +272,10 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="data.js"></script>
+<script src="assets/vendor/fuse.min.js"></script>
+<script src="assets/vendor/chart.umd.min.js"></script>
+<script src="engines/search-engine.js"></script>
+<script src="engines/pro-api-connector.js"></script>
 <script src="core.js"></script>
 <script src="app.js"></script>
 </body>
