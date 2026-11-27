@@ -169,6 +169,7 @@
     var el = node.nodeType === 1 ? node : node.parentElement;
     while (el && el !== root.parentElement) {
       if (el.hasAttribute && el.hasAttribute('data-i18n-skip')) return true;
+      if (el.hasAttribute && el.hasAttribute('data-i18n-en')) return true;
       el = el.parentElement;
     }
     return false;
@@ -236,9 +237,22 @@
     for (var i = 0; i < kids.length; i++) walk(kids[i], root);
   }
 
+  // 문장 어순이 언어마다 달라 조각 번역이 어색해지는 제목 등은
+  // data-i18n-en 에 완성된 영어 문장(HTML)을 적어 통째로 바꾼다.
+  function applyEnOverrides() {
+    var els = document.querySelectorAll('[data-i18n-en]');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el.getAttribute('data-i18n-done') === '1') continue;
+      el.innerHTML = el.getAttribute('data-i18n-en');
+      el.setAttribute('data-i18n-done', '1');
+    }
+  }
+
   function applyAll() {
     if (IS_KO) return;
     walk(document.documentElement, document.documentElement);
+    applyEnOverrides();
   }
 
   function injectToggle() {
