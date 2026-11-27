@@ -90,11 +90,19 @@
   // 한국식 금액 표기(1,234원 / 217.1만 / 89만 원)를 ₩ 표기로 바꾼다 (영어 모드 전용)
   function normKoNumbers(s) {
     var out = s;
+    // 89만 원 / 1만5천 원
     out = out.replace(/(\d[\d,]*(?:\.\d+)?)\s*만\s*원/g, function (m, a) {
       return '₩' + fmtWon(parseFloat(a.replace(/,/g, '')) * 10000);
     });
-    out = out.replace(/(\d[\d,]*(?:\.\d+)?)\s*만(?![가-힣])/g, function (m, a) {
-      return '₩' + fmtWon(parseFloat(a.replace(/,/g, '')) * 10000);
+    // 217.1만 / 55.3만회 / 1.2만명 — 만은 만원(금액)일 수도, 개수 단위일 수도 있다.
+    out = out.replace(/(\d[\d,]*(?:\.\d+)?)\s*만\s*(회|명|건|개|자|뷰)?/g, function (m, a, u) {
+      var n = parseFloat(a.replace(/,/g, '')) * 10000;
+      if (u === '회' || u === '뷰') return fmtWon(n) + ' views';
+      if (u === '명') return fmtWon(n) + ' people';
+      if (u === '자') return fmtWon(n) + ' chars';
+      if (u === '건' || u === '개') return fmtWon(n);
+      if (window.ONETAP_MAN_AS_WON) return '₩' + fmtWon(n);
+      return fmtWon(n);
     });
     out = out.replace(/(\d[\d,]*)\s*원/g, function (m, a) { return '₩' + a; });
     return out;
@@ -198,10 +206,6 @@
     if (unitEl && unitEl.getAttribute && unitEl.getAttribute('data-unit')) {
       var u = lookup('@unit:' + unitEl.getAttribute('data-unit'));
       if (u != null) { node.nodeValue = lead + u + tail; return; }
-    }
-    if (unitEl && unitEl.classList && unitEl.classList.contains('unit')) {
-      var u2 = lookup('@unit');
-      if (u2 != null) { node.nodeValue = lead + u2 + tail; return; }
     }
     var out2 = translatePlain(core);
     if (out2 != null) node.nodeValue = lead + out2 + tail;
